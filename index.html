@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Casting Volume Estimator</title>
+<style>
+  #mesh-viewer { width: 600px; height: 400px; border: 1px solid #ccc; margin: 20px auto; }
+  body { text-align: center; font-family: Arial; }
+</style>
+</head>
+<body>
+
+<h1>Casting Pattern Volume Estimator</h1>
+<form id="upload-form">
+  <label>Select Pattern Type:</label>
+  <select name="patternType">
+      <option value="single">Single Piece</option>
+      <option value="two">Two Piece</option>
+      <option value="split">Split Pattern</option>
+  </select>
+  <br><br>
+  <label>Upload up to 5 photos:</label>
+  <input type="file" name="images" accept="image/*" multiple required>
+  <br><br>
+  <label>Reference length in cm:</label>
+  <input type="number" name="refLength" placeholder="Enter reference length" required>
+  <br><br>
+  <button type="submit">Upload & View 3D Mesh</button>
+</form>
+
+<h2>Estimated Volume: <span id="volume">-</span> cm³</h2>
+<div id="mesh-viewer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
+
+<script>
+const form = document.getElementById('upload-form');
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const formData = new FormData(form);
+  const res = await fetch('/upload', { method: 'POST', body: formData });
+  const data = await res.json();
+  document.getElementById('volume').innerText = data.volume;
+
+  // Load GLB mesh using Three.js
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(75, 600/400, 0.1, 1000);
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(600, 400);
+  document.getElementById('mesh-viewer').innerHTML = '';
+  document.getElementById('mesh-viewer').appendChild(renderer.domElement);
+
+  const light = new THREE.DirectionalLight(0xffffff, 1);
+  light.position.set(10, 10, 10).normalize();
+  scene.add(light);
+
+  const loader = new THREE.GLTFLoader();
+  loader.load(data.mesh_url, function(gltf) {
+    scene.add(gltf.scene);
+    gltf.scene.rotation.y = Math.PI / 4;
+  });
+
+  camera.position.z = 200;
+  function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+  }
+  animate();
+});
+</script>
+</body>
+</html>
